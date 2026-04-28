@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f1923; --panel: #162130; --card: #1e2f42; --border: #2a3f55;
+    --text: #e8f4ff; --muted: #7a9bbf;
+    --strong: #ffdd44; --weak: #ffaa22; --none-col: #90aac8;
+    --accent: #00c8ff; --correct: #22cc77; --wrong: #ff4466;
+  }
+  body {
+    font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text);
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; padding: 12px;
+  }
+  h1 {
+    font-size: 1.3rem; font-weight: 900; color: var(--accent);
+    letter-spacing: 2px; text-align: center; margin-bottom: 6px;
+    text-shadow: 0 0 20px rgba(0,200,255,0.5);
+  }
+  .mode-tabs { display: flex; gap: 8px; margin-bottom: 10px; }
+  .mode-tab {
+    padding: 6px 18px; border-radius: 20px; border: 2px solid var(--border);
+    background: var(--panel); color: var(--muted); font-family: inherit;
+    font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.2s;
+  }
+  .mode-tab.active { background: var(--accent); color: #0f1923; border-color: var(--accent); }
+
+  .circuit-wrap {
+    width: 100%; max-width: 480px; background: var(--panel);
+    border: 2px solid var(--border); border-radius: 16px; padding: 10px; margin-bottom: 10px;
+  }
+  .circuit-svg { width: 100%; height: 210px; }
+  @keyframes glow-strong {
+    0%,100% { filter: drop-shadow(0 0 8px #ffe033) drop-shadow(0 0 20px #ffcc00); }
+    50% { filter: drop-shadow(0 0 16px #ffe033) drop-shadow(0 0 40px #ffcc00); }
+  }
+  @keyframes glow-weak {
+    0%,100% { filter: drop-shadow(0 0 4px #ff9900); }
+    50% { filter: drop-shadow(0 0 10px #ff9900); }
+  }
+  .bulb-off { fill: #3a4a5a; }
+  .bulb-strong { fill: #ffe033; animation: glow-strong 1s ease-in-out infinite; }
+  .bulb-weak { fill: #ff9900; animation: glow-weak 1.5s ease-in-out infinite; }
+  .wire { stroke: #4a7a9b; stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .electrode-rod { stroke: #7aacbd; stroke-width: 5; stroke-linecap: round; }
+
+  .info-box {
+    background: var(--card); border: 2px solid var(--border);
+    border-radius: 12px; padding: 10px 14px; margin-bottom: 10px;
+    width: 100%; max-width: 480px; min-height: 68px; transition: border-color 0.3s;
+  }
+  .info-box.strong { border-color: var(--strong); }
+  .info-box.weak   { border-color: var(--weak); }
+  .info-box.none   { border-color: var(--none-col); }
+  .info-title { font-size: 0.95rem; font-weight: 900; margin-bottom: 3px; }
+  .info-title.strong { color: var(--strong); }
+  .info-title.weak   { color: var(--weak); }
+  .info-title.none   { color: var(--none-col); }
+  .info-sub { font-size: 0.78rem; color: var(--muted); margin-bottom: 3px; font-weight: 700; }
+  .info-eq  { font-size: 0.8rem; color: #a0c8e8; line-height: 1.6; }
+  .info-hint { font-size: 0.78rem; color: var(--muted); font-style: italic; }
+
+  .substance-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 6px; width: 100%; max-width: 480px; margin-bottom: 10px;
+  }
+  .sub-btn {
+    background: #2a3f58; border: 2px solid #4a6a88;
+    border-radius: 10px; padding: 8px 4px;
+    font-family: inherit; font-size: 0.72rem; font-weight: 700;
+    color: #c8e0f4; cursor: pointer; transition: all 0.18s; text-align: center;
+  }
+  .sub-btn:hover { transform: translateY(-2px); background: #334f6e; color: #e8f4ff; }
+  .sub-btn.sel-strong { border-color: var(--strong); background: rgba(255,221,68,0.15); color: var(--strong); box-shadow: 0 0 10px rgba(255,221,68,0.3); transform: translateY(-2px); }
+  .sub-btn.sel-weak   { border-color: var(--weak);   background: rgba(255,170,34,0.15); color: var(--weak);   box-shadow: 0 0 10px rgba(255,170,34,0.3); transform: translateY(-2px); }
+  .sub-btn.sel-none   { border-color: var(--none-col); background: rgba(144,170,200,0.15); color: var(--none-col); box-shadow: 0 0 8px rgba(144,170,200,0.2); transform: translateY(-2px); }
+
+  .ctrl-btn {
+    width: 100%; max-width: 480px; padding: 9px; border-radius: 10px;
+    border: 2px solid #ff4466; background: var(--panel); color: #ff4466;
+    font-family: inherit; font-size: 0.82rem; font-weight: 800;
+    cursor: pointer; transition: all 0.2s; margin-bottom: 8px;
+  }
+  .ctrl-btn:hover { background: rgba(255,68,102,0.1); }
+
+  /* Quiz */
+  .quiz-wrap { width: 100%; max-width: 480px; }
+  .quiz-score {
+    display: flex; justify-content: space-between;
+    background: var(--panel); border-radius: 10px; padding: 8px 12px;
+    font-size: 0.82rem; color: var(--muted); font-weight: 700; margin-bottom: 8px;
+  }
+  .quiz-score span { color: var(--accent); font-size: 1rem; }
+  .quiz-q {
+    background: var(--card); border: 2px solid var(--accent);
+    border-radius: 14px; padding: 14px; margin-bottom: 10px;
+    font-size: 1rem; font-weight: 700; text-align: center; color: var(--accent);
+  }
+  .quiz-choices { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .choice-btn {
+    padding: 12px 6px; border-radius: 10px; border: 2px solid #4a6a88;
+    background: #2a3f58; color: #c8e0f4; font-family: inherit;
+    font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: all 0.2s; text-align: center;
+  }
+  .choice-btn:hover:not(:disabled) { border-color: var(--accent); color: #e8f4ff; }
+  .choice-btn.correct { border-color: var(--correct); background: rgba(34,204,119,0.15); color: var(--correct); }
+  .choice-btn.wrong   { border-color: var(--wrong);   background: rgba(255,68,102,0.15);  color: var(--wrong); }
+  .choice-btn:disabled { cursor: default; }
+
+  .quiz-feedback {
+    text-align: center; font-size: 0.83rem; font-weight: 700;
+    padding: 8px; border-radius: 8px; margin-bottom: 8px; min-height: 36px;
+  }
+  .quiz-feedback.correct { color: var(--correct); background: rgba(34,204,119,0.1); }
+  .quiz-feedback.wrong   { color: var(--wrong);   background: rgba(255,68,102,0.1); }
+
+  .quiz-circuit { width: 100%; background: var(--panel); border: 2px solid var(--border); border-radius: 12px; padding: 8px; margin-bottom: 8px; display: none; }
+  .quiz-circuit.show { display: block; }
+  .quiz-circuit svg { width: 100%; height: 155px; }
+
+  .next-btn {
+    width: 100%; padding: 10px; border-radius: 10px;
+    border: 2px solid var(--accent); background: rgba(0,200,255,0.1);
+    color: var(--accent); font-family: inherit; font-size: 0.9rem; font-weight: 800;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .next-btn:hover { background: rgba(0,200,255,0.2); }
+  .next-btn:disabled { opacity: 0.4; cursor: default; }
+
+  /* Result — stays inside quiz-wrap, NOT replacing it */
+  .result-box {
+    text-align: center; padding: 24px; background: var(--card);
+    border: 2px solid var(--accent); border-radius: 16px;
+  }
+  .result-score { font-size: 2.5rem; font-weight: 900; color: var(--strong); }
+  .result-msg { font-size: 0.9rem; color: var(--muted); margin-top: 6px; }
+  .result-btns { margin-top: 12px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .restart-btn {
+    padding: 10px 20px; border-radius: 10px;
+    border: 2px solid var(--accent); background: var(--accent);
+    color: #0f1923; font-family: inherit; font-size: 0.88rem; font-weight: 900; cursor: pointer;
+  }
+  .restart-btn.outline {
+    background: var(--panel); color: var(--accent);
+  }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<h1>⚡ 電解質檢測實驗室</h1>
+<div class="mode-tabs">
+  <button class="mode-tab active" id="tab-explore" onclick="switchMode('explore')">🔬 自由探索</button>
+  <button class="mode-tab" id="tab-quiz" onclick="switchMode('quiz')">🎯 猜猜看</button>
+</div>
+
+<!-- EXPLORE -->
+<div id="explore-mode">
+  <div class="circuit-wrap">
+    <svg class="circuit-svg" id="main-circuit" viewBox="0 0 420 200"></svg>
+  </div>
+  <div class="info-box" id="info-box">
+    <div class="info-hint">👆 點選下方任一物質，加入純水中觀察導電情形</div>
+  </div>
+  <div class="substance-grid" id="substance-grid"></div>
+  <button class="ctrl-btn" onclick="resetExplore()">🔄 清空重置</button>
+</div>
+
+<!-- QUIZ — structure stays fixed, only inner panels swap -->
+<div id="quiz-mode" class="hidden quiz-wrap">
+  <!-- Quiz panel -->
+  <div id="quiz-panel">
+    <div class="quiz-score">
+      <div>第 <span id="q-num">1</span> / 5 題</div>
+      <div>答對 <span id="q-score">0</span> 題</div>
+    </div>
+    <div class="quiz-q" id="quiz-question"></div>
+    <div class="quiz-choices" id="quiz-choices"></div>
+    <div class="quiz-feedback" id="quiz-feedback"></div>
+    <div class="quiz-circuit" id="quiz-circuit">
+      <svg id="quiz-circuit-svg" viewBox="0 0 420 145"></svg>
+    </div>
+    <button class="next-btn" id="next-btn" onclick="nextQuestion()" disabled>下一題 →</button>
+  </div>
+  <!-- Result panel -->
+  <div id="result-panel" class="hidden">
+    <div class="result-box">
+      <div style="font-size:2rem">🧪</div>
+      <div class="result-score" id="result-score-txt"></div>
+      <div class="result-msg" id="result-msg-txt"></div>
+      <div class="result-btns">
+        <button class="restart-btn" onclick="restartQuiz()">再試一次</button>
+        <button class="restart-btn outline" onclick="switchMode('explore')">回探索模式</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const substances = [
+  { name:'鹽酸',    type:'strong', sub:'強酸', formula:'HCl → H⁺ + Cl⁻',                note:'強酸，完全解離' },
+  { name:'硫酸',    type:'strong', sub:'強酸', formula:'H₂SO₄ → 2H⁺ + SO₄²⁻',          note:'強酸，完全解離' },
+  { name:'硝酸',    type:'strong', sub:'強酸', formula:'HNO₃ → H⁺ + NO₃⁻',             note:'強酸，完全解離' },
+  { name:'氫氧化鈉', type:'strong', sub:'強鹼', formula:'NaOH → Na⁺ + OH⁻',            note:'強鹼，完全解離' },
+  { name:'氫氧化鈣', type:'strong', sub:'強鹼', formula:'Ca(OH)₂ → Ca²⁺ + 2OH⁻',      note:'強鹼，完全解離' },
+  { name:'氫氧化鉀', type:'strong', sub:'強鹼', formula:'KOH → K⁺ + OH⁻',             note:'強鹼，完全解離' },
+  { name:'氯化鈉',   type:'strong', sub:'鹽類', formula:'NaCl → Na⁺ + Cl⁻',           note:'食鹽，完全解離' },
+  { name:'硝酸鉀',   type:'strong', sub:'鹽類', formula:'KNO₃ → K⁺ + NO₃⁻',          note:'鹽類，完全解離' },
+  { name:'碳酸鈉',   type:'strong', sub:'鹽類', formula:'Na₂CO₃ → 2Na⁺ + CO₃²⁻',     note:'蘇打，鹽類完全解離' },
+  { name:'碳酸氫鈉', type:'strong', sub:'鹽類', formula:'NaHCO₃ → Na⁺ + HCO₃⁻',      note:'小蘇打，鹽類完全解離' },
+  { name:'醋酸',    type:'weak', sub:'弱酸', formula:'CH₃COOH ⇌ H⁺ + CH₃COO⁻',       note:'弱酸，部份解離' },
+  { name:'碳酸',    type:'weak', sub:'弱酸', formula:'H₂CO₃ ⇌ H⁺ + HCO₃⁻',           note:'弱酸，部份解離' },
+  { name:'氨水',    type:'weak', sub:'弱鹼', formula:'NH₃·H₂O ⇌ NH₄⁺ + OH⁻',         note:'弱鹼，部份解離' },
+  { name:'乙醇',   type:'none', sub:'有機物', formula:'C₂H₅OH（不解離）',             note:'酒精，非電解質' },
+  { name:'甲醇',   type:'none', sub:'有機物', formula:'CH₃OH（不解離）',               note:'非電解質' },
+  { name:'葡萄糖', type:'none', sub:'有機物', formula:'C₆H₁₂O₆（不解離）',            note:'非電解質' },
+  { name:'蔗糖',   type:'none', sub:'有機物', formula:'C₁₂H₂₂O₁₁（不解離）',         note:'非電解質' },
+  { name:'果糖',   type:'none', sub:'有機物', formula:'C₆H₁₂O₆（不解離）',            note:'非電解質' },
+  { name:'蒸餾水', type:'none', sub:'其他',   formula:'H₂O（極少量自解離，視為非電解質）', note:'純水，非電解質' },
+  { name:'石墨粉', type:'none', sub:'其他',   formula:'C（不溶於水）',                 note:'非電解質' },
+];
+
+function shuffle(arr) { return [...arr].sort(() => Math.random()-0.5); }
+
+// ===== DRAW CIRCUIT =====
+function drawCircuit(svgEl, type, vbH) {
+  svgEl.innerHTML = '';
+  const W=420, H=vbH||200, ns='http://www.w3.org/2000/svg';
+  function el(tag, attrs, txt) {
+    const e = document.createElementNS(ns, tag);
+    for (const [k,v] of Object.entries(attrs)) e.setAttribute(k,v);
+    if (txt!==undefined) e.textContent=txt;
+    return e;
+  }
+  function line(x1,y1,x2,y2) { return el('line',{x1,y1,x2,y2,class:'wire'}); }
+
+  const batCX=52,batY=62,batW=44,batH=50;
+  const bulbCX=210,bulbCY=36,bulbR=22;
+  const bkX=130,bkY=100,bkW=160,bkH=76;
+  const e1X=bkX+35, e2X=bkX+bkW-35;
+  const topY=16, botY=H-16;
+
+  svgEl.appendChild(line(batCX,batY,batCX,topY));
+  svgEl.appendChild(line(batCX,topY,bulbCX-bulbR-2,topY));
+  svgEl.appendChild(line(bulbCX+bulbR+2,topY,W-30,topY));
+  svgEl.appendChild(line(W-30,topY,W-30,botY));
+  svgEl.appendChild(line(W-30,botY,e2X,botY));
+  svgEl.appendChild(line(e2X,botY,e2X,bkY));
+  svgEl.appendChild(line(e1X,bkY,e1X,botY));
+  svgEl.appendChild(line(e1X,botY,batCX,botY));
+  svgEl.appendChild(line(batCX,botY,batCX,batY+batH));
+
+  svgEl.appendChild(el('rect',{x:batCX-22,y:batY,width:batW,height:batH,rx:'6',fill:'#2a4a6a',stroke:'#4a7a9b','stroke-width':'1.5'}));
+  svgEl.appendChild(el('text',{x:batCX,y:batY+20,'text-anchor':'middle','font-size':'14'},'🔋'));
+  svgEl.appendChild(el('text',{x:batCX,y:batY+36,'text-anchor':'middle','font-size':'9',fill:'#aaa'},'電池'));
+  svgEl.appendChild(el('text',{x:batCX,y:batY-4,'text-anchor':'middle','font-size':'10',fill:'#ffdd44'},'+'));
+  svgEl.appendChild(el('text',{x:batCX,y:batY+batH+11,'text-anchor':'middle','font-size':'10',fill:'#aaa'},'－'));
+
+  const bulbCls = type==='strong'?'bulb-strong':type==='weak'?'bulb-weak':'bulb-off';
+  const bulbFill = type==='strong'?'#ffe033':type==='weak'?'#ff9900':'#3a4a5a';
+  if (type==='strong') svgEl.appendChild(el('ellipse',{cx:bulbCX,cy:bulbCY,rx:bulbR+8,ry:bulbR+8,fill:'rgba(255,240,100,0.10)'}));
+  svgEl.appendChild(el('ellipse',{cx:bulbCX,cy:bulbCY,rx:bulbR,ry:bulbR,class:bulbCls,fill:bulbFill}));
+  const filCol = type==='strong'?'#fff':type==='weak'?'#ffe8c0':'#667788';
+  svgEl.appendChild(el('polyline',{points:`${bulbCX-9},${bulbCY} ${bulbCX-5},${bulbCY-7} ${bulbCX},${bulbCY} ${bulbCX+5},${bulbCY-7} ${bulbCX+9},${bulbCY}`,fill:'none',stroke:filCol,'stroke-width':'1.5'}));
+  svgEl.appendChild(el('rect',{x:bulbCX-7,y:bulbCY+bulbR-1,width:14,height:7,rx:'3',fill:'#445566'}));
+  svgEl.appendChild(line(bulbCX-5,bulbCY+bulbR+6,bulbCX-5,topY));
+  svgEl.appendChild(line(bulbCX+5,bulbCY+bulbR+6,bulbCX+5,topY));
+  svgEl.appendChild(el('text',{x:bulbCX,y:bulbCY+bulbR+19,'text-anchor':'middle','font-size':'9',fill:'#7a9bbf'},'燈泡'));
+
+  const waterH=bkH-22;
+  svgEl.appendChild(el('rect',{x:bkX,y:bkY+22,width:bkW,height:waterH,fill:'rgba(26,111,168,0.35)'}));
+  svgEl.appendChild(el('rect',{x:bkX,y:bkY,width:bkW,height:bkH,rx:'4',fill:'rgba(26,111,168,0.08)',stroke:'#2a8fd4','stroke-width':'2.5'}));
+  const bkLbl=type==='strong'?'強電解質水溶液':type==='weak'?'弱電解質水溶液':type==='none'?'非電解質水溶液':'純水';
+  svgEl.appendChild(el('text',{x:bkX+bkW/2,y:bkY+bkH+14,'text-anchor':'middle','font-size':'9',fill:'#4a8aaa'},bkLbl));
+
+  svgEl.appendChild(el('line',{x1:e1X,y1:bkY,x2:e1X,y2:bkY+bkH-8,class:'electrode-rod'}));
+  svgEl.appendChild(el('text',{x:e1X,y:bkY-4,'text-anchor':'middle','font-size':'9',fill:'#7aacbd'},'－'));
+  svgEl.appendChild(el('line',{x1:e2X,y1:bkY,x2:e2X,y2:bkY+bkH-8,class:'electrode-rod'}));
+  svgEl.appendChild(el('text',{x:e2X,y:bkY-4,'text-anchor':'middle','font-size':'9',fill:'#7aacbd'},'+'));
+}
+
+// ===== EXPLORE =====
+let selIdx = null;
+function buildExplore() {
+  const grid = document.getElementById('substance-grid');
+  grid.innerHTML = '';
+  shuffle(substances.map((_,i)=>i)).forEach(idx => {
+    const s = substances[idx];
+    const btn = document.createElement('button');
+    btn.className = 'sub-btn'; btn.id = `sub-${idx}`; btn.textContent = s.name;
+    btn.onclick = () => selectSub(idx);
+    grid.appendChild(btn);
+  });
+  drawCircuit(document.getElementById('main-circuit'), null, 200);
+}
+function selectSub(idx) {
+  if (selIdx!==null) { const o=document.getElementById(`sub-${selIdx}`); if(o) o.className='sub-btn'; }
+  selIdx=idx;
+  const s=substances[idx];
+  document.getElementById(`sub-${idx}`).className=`sub-btn sel-${s.type}`;
+  drawCircuit(document.getElementById('main-circuit'), s.type, 200);
+  const typeLabel={strong:'強電解質 — 在水中完全解離',weak:'弱電解質 — 在水中部份解離',none:'非電解質 — 在水中無法解離'};
+  const box=document.getElementById('info-box');
+  box.className=`info-box ${s.type}`;
+  box.innerHTML=`<div class="info-title ${s.type}">${typeLabel[s.type]}</div><div class="info-sub">類別：${s.sub}</div><div class="info-eq">${s.formula}</div><div class="info-hint" style="margin-top:3px">${s.note}</div>`;
+}
+function resetExplore() {
+  if (selIdx!==null) { const o=document.getElementById(`sub-${selIdx}`); if(o) o.className='sub-btn'; selIdx=null; }
+  drawCircuit(document.getElementById('main-circuit'), null, 200);
+  const box=document.getElementById('info-box');
+  box.className='info-box';
+  box.innerHTML='<div class="info-hint">👆 點選下方任一物質，加入純水中觀察導電情形</div>';
+}
+
+// ===== QUIZ =====
+let quizQ=[], quizIdx=0, quizScore=0, quizAnswered=false;
+
+function showQuizPanel() {
+  document.getElementById('quiz-panel').classList.remove('hidden');
+  document.getElementById('result-panel').classList.add('hidden');
+}
+function showResultPanel() {
+  document.getElementById('quiz-panel').classList.add('hidden');
+  document.getElementById('result-panel').classList.remove('hidden');
+}
+
+function initQuiz() {
+  quizQ=shuffle(substances).slice(0,5);
+  quizIdx=0; quizScore=0; quizAnswered=false;
+  document.getElementById('q-score').textContent=0;
+  showQuizPanel();
+  renderQuizQ();
+}
+
+function restartQuiz() { initQuiz(); }
+
+function renderQuizQ() {
+  const q=quizQ[quizIdx];
+  document.getElementById('q-num').textContent=quizIdx+1;
+  document.getElementById('quiz-question').textContent=`「${q.name}」是哪種電解質？`;
+  document.getElementById('next-btn').disabled=true;
+  document.getElementById('quiz-feedback').textContent='';
+  document.getElementById('quiz-feedback').className='quiz-feedback';
+  document.getElementById('quiz-circuit').classList.remove('show');
+  quizAnswered=false;
+  const labels={strong:'⚡ 強電解質',weak:'💡 弱電解質',none:'⭕ 非電解質'};
+  const container=document.getElementById('quiz-choices');
+  container.innerHTML='';
+  shuffle(['strong','weak','none']).forEach(opt=>{
+    const btn=document.createElement('button');
+    btn.className='choice-btn'; btn.textContent=labels[opt];
+    btn.onclick=()=>quizAnswer(opt,q);
+    container.appendChild(btn);
+  });
+}
+
+function quizAnswer(chosen, q) {
+  if (quizAnswered) return;
+  quizAnswered=true;
+  document.getElementById('next-btn').disabled=false;
+  const labels={strong:'⚡ 強電解質',weak:'💡 弱電解質',none:'⭕ 非電解質'};
+  document.querySelectorAll('.choice-btn').forEach(b=>{
+    b.disabled=true;
+    const bType=Object.keys(labels).find(k=>labels[k]===b.textContent);
+    if (bType===q.type) b.classList.add('correct');
+    else if (bType===chosen && chosen!==q.type) b.classList.add('wrong');
+  });
+  const fb=document.getElementById('quiz-feedback');
+  const typeNames={strong:'強電解質',weak:'弱電解質',none:'非電解質'};
+  if (chosen===q.type) {
+    quizScore++;
+    document.getElementById('q-score').textContent=quizScore;
+    fb.className='quiz-feedback correct';
+    fb.textContent=`✅ 答對！${q.formula}`;
+  } else {
+    fb.className='quiz-feedback wrong';
+    fb.textContent=`❌ 答錯！「${q.name}」是${typeNames[q.type]}（${q.sub}）。${q.note}`;
+  }
+  document.getElementById('quiz-circuit').classList.add('show');
+  drawCircuit(document.getElementById('quiz-circuit-svg'), q.type, 145);
+}
+
+function nextQuestion() {
+  quizIdx++;
+  if (quizIdx>=5) { showResult(); return; }
+  renderQuizQ();
+}
+
+function showResult() {
+  const msgs=['再多練習！💪','還可以更好！📚','答得不錯！👍','很厲害！🎉','全對！電解質達人！🏆'];
+  document.getElementById('result-score-txt').textContent=`${quizScore} / 5`;
+  document.getElementById('result-msg-txt').textContent=msgs[quizScore];
+  showResultPanel();
+}
+
+// ===== MODE SWITCH =====
+function switchMode(mode) {
+  document.getElementById('tab-explore').classList.toggle('active', mode==='explore');
+  document.getElementById('tab-quiz').classList.toggle('active', mode==='quiz');
+  document.getElementById('explore-mode').classList.toggle('hidden', mode!=='explore');
+  document.getElementById('quiz-mode').classList.toggle('hidden', mode!=='quiz');
+  if (mode==='quiz') initQuiz();
+  else resetExplore();
+}
+
+buildExplore();
+</script>
+</body>
+</html>
